@@ -2,9 +2,11 @@
 #include "SPI.h"
 #include "Neophob_LPD6803.h"
 
+#define SPI_A(data) SPDR=data;
+#define SPI_B while(!(SPSR & (1<<SPIF))); 
+#define SPI_TRANSFER(data) { SPDR=data; while(!(SPSR & (1<<SPIF))); } 
 
-// Example to control WS2801-based RGB LED Modules in a strand or strip
-// Written by Adafruit - MIT license
+// Example to control LPD6803-based RGB LED Modules in a strand or strip
 /*****************************************************************************/
 
 //some local variables, ised in isr
@@ -23,24 +25,17 @@ Neophob_LPD6803::Neophob_LPD6803(uint16_t n) {
   cpumax = 70;
 }
 
-#define SPI_A(data) SPDR=data;
-#define SPI_B while(!(SPSR & (1<<SPIF))); 
-#define SPI_TRANSFER(data) { SPDR=data; while(!(SPSR & (1<<SPIF))); } 
-
 //Interrupt routine.
 //Frequency was set in setup(). Called once for every bit of data sent
 //In your code, set global Sendmode to 0 to re-send the data to the pixels
 //Otherwise it will just send clocks.
-
-//unsure, other use "ISR(SPI_STC_vect)" call
 static void isr() {
   static unsigned char nState=1;
   static unsigned char indx=0;
   
-  if(nState==1) 
-  {
+  if(nState==1) {//send clock and check for color update (isDirty)  
     SPI_A(0); 
-    if (isDirty==1) {
+    if (isDirty==1) { //must we update the pixel value
       nState = 0;
       isDirty = 0;
       SPI_B; 
@@ -53,23 +48,20 @@ static void isr() {
     SPI_A(0);
     return;
   }
-  else
-  {
+  else {                        //feed out pixelbuffer    
     register uint16_t command;
-    command = *(pData++);//pixels[indx]; //get current pixel
-/*    command = 0x8000;
-    command |= (*(pData++) & 0xF8) << 7; // red is the high 5 bits
-    command |= (*(pData++) & 0xF8) << 2; // green is the middle 5 bits
-    command |= *(pData++) >> 3 ; // blue is the low 5 bits*/
-    SPI_B;
+    command = *(pData++);       //get current pixel
+    SPI_B;                      //send 8bits
     SPI_A( (command>>8) & 0xFF);
     
-    indx++;    
+    SPI_B;                      //send 8bits
+    SPI_A( command & 0xFF);
+    
+    indx++;                     //are we done?
     if(indx >= prettyUglyCopyOfNumPixels) { 
       nState = 1;
     }
-    SPI_B;
-    SPI_A( command & 0xFF);
+
     return;
   } 
 }
