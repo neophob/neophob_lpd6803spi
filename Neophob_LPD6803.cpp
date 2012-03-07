@@ -1,13 +1,16 @@
+/*********************************************************************************/
+// Example to control LPD6803-based RGB LED Modules in a strand or strip via SPI
+// by Michael Vogt / http://pixelinvaders.ch
+// This Library is basically a copy and paste work and relies on work 
+// of Adafruit-WS2801-Library and FastSPI Library 
+/*********************************************************************************/
+
 #include <TimerOne.h>
 #include "SPI.h"
 #include "Neophob_LPD6803.h"
 
 #define SPI_A(data) SPDR=data;
 #define SPI_B while(!(SPSR & (1<<SPIF))); 
-#define SPI_TRANSFER(data) { SPDR=data; while(!(SPSR & (1<<SPIF))); } 
-
-// Example to control LPD6803-based RGB LED Modules in a strand or strip
-/*****************************************************************************/
 
 //some local variables, ised in isr
 static uint8_t isDirty;
@@ -17,10 +20,10 @@ static uint16_t *pDataStart;
 
 // Constructor for use with hardware SPI (specific clock/data pins):
 Neophob_LPD6803::Neophob_LPD6803(uint16_t n) {
-  numLEDs = n;
   prettyUglyCopyOfNumPixels = n;  
+  numLEDs = n;  
   pixels = (uint16_t *)malloc(numLEDs);
-  pDataStart = pixels; //huh, not sure
+  pDataStart = pixels;
   isDirty = 0;    
   cpumax = 70;
 }
@@ -54,7 +57,7 @@ static void isr() {
     SPI_B;                      //send 8bits
     SPI_A( (command>>8) & 0xFF);
     
-    SPI_B;                      //send 8bits
+    SPI_B;                      //send 8bits again
     SPI_A( command & 0xFF);
     
     indx++;                     //are we done?
