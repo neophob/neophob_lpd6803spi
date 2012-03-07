@@ -36,6 +36,4 @@ class Neophob_LPD6803 {
   void    
     startSPI(void),
     LedOut();
-  boolean
-    begun;       // If 'true', begin() method was previously invoked
 };

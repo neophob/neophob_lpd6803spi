@@ -19,9 +19,7 @@ Neophob_LPD6803::Neophob_LPD6803(uint16_t n) {
   prettyUglyCopyOfNumPixels = n;  
   pixels = (uint16_t *)malloc(numLEDs);
   pDataStart = pixels; //huh, not sure
-  isDirty = 0;
-  begun   = false;
-    
+  isDirty = 0;    
   cpumax = 70;
 }
 
@@ -83,8 +81,6 @@ void Neophob_LPD6803::begin(void) {
 
   setCPUmax(cpumax);
   Timer1.attachInterrupt(isr);
-
-  begun = true;
 }
 
 void Neophob_LPD6803::setCPUmax(uint8_t max) {
