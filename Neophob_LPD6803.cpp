@@ -37,7 +37,7 @@ static void isr() {
   static unsigned char indx=0;
   
   if(nState==1) {//send clock and check for color update (isDirty)  
-    SPI_A(0); 
+    SPI_A(0); //maybe, move at the end of the startSPI() method
     if (isDirty==1) { //must we update the pixel value
       nState = 0;
       isDirty = 0;
