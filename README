@@ -1,4 +1,5 @@
-This is an Arduino library for LPD6803 based led Pixels. You can get the modules in my online shop at http://pixelinvaders.ch/?page_id=390
+This is an Arduino library for LPD6803 based led Pixels. 
+You can get the modules in my online shop at http://pixelinvaders.ch/?page_id=390
 
 This Library uses the SPI bus, so the pins you need is defined by hardware:
 ----
