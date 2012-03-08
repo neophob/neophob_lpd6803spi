@@ -16,5 +16,6 @@ src: http://forums.adafruit.com/viewtopic.php?f=47&t=24256
 thanks phil!
 ----
 
-This Library is basically a copy and paste work and relies on work of Adafruit-WS2801-Library and FastSPI Library
+This Library is basically a copy and paste work and relies on work of Adafruit-WS2801-Library 
+and FastSPI Library
 
