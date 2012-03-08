@@ -17,6 +17,7 @@ static uint8_t isDirty;
 static uint16_t prettyUglyCopyOfNumPixels;
 static uint16_t *pData;
 static uint16_t *pDataStart;
+volatile unsigned char nState=1;
 
 // Constructor for use with hardware SPI (specific clock/data pins):
 Neophob_LPD6803::Neophob_LPD6803(uint16_t n) {
@@ -26,6 +27,11 @@ Neophob_LPD6803::Neophob_LPD6803(uint16_t n) {
   pDataStart = pixels;
   isDirty = 0;    
   cpumax = 70;
+  
+  //clear buffer
+  for (int i=0; i < numLEDs; i++) {
+    setPixelColor(i,0);
+  }
 }
 
 //Interrupt routine.
@@ -33,11 +39,11 @@ Neophob_LPD6803::Neophob_LPD6803(uint16_t n) {
 //In your code, set global Sendmode to 0 to re-send the data to the pixels
 //Otherwise it will just send clocks.
 static void isr() {
-  static unsigned char nState=1;
+  //static unsigned char nState=1;
   static unsigned char indx=0;
   
-  if(nState==1) {//send clock and check for color update (isDirty)  
-    SPI_A(0); //maybe, move at the end of the startSPI() method
+  if(nState==1) {//send clock and check for color update (isDirty)
+    //SPI_A(0); //maybe, move at the end of the startSPI() method
     if (isDirty==1) { //must we update the pixel value
       nState = 0;
       isDirty = 0;
@@ -94,13 +100,15 @@ void Neophob_LPD6803::startSPI(void) {
   SPI.begin();
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
-  SPI.setClockDivider(SPI_CLOCK_DIV8);  // 2 MHz
-  // WS2801 datasheet recommends max SPI clock of 2 MHz, and 50 Ohm
+//  SPI.setClockDivider(SPI_CLOCK_DIV8);  // 2 MHz
+ SPI.setClockDivider(SPI_CLOCK_DIV4);  // 4 MHz  
+  // LPD6803 can handle a data/PWM clock of up to 25 MHz, and 50 Ohm
   // resistors on SPI lines for impedance matching.  In practice and
   // at short distances, 2 MHz seemed to work reliably enough without
   // resistors, and 4 MHz was possible with a 220 Ohm resistor on the
   // SPI clock line only.  Your mileage may vary.  Experiment!
-  // SPI.setClockDivider(SPI_CLOCK_DIV4);  // 4 MHz
+  
+  SPI_A(0); //maybe, move at the end of the startSPI() method
 }
 
 uint16_t Neophob_LPD6803::numPixels(void) {
@@ -122,7 +130,7 @@ void Neophob_LPD6803::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b)
 	   functions in reverse (high to low pixel index), then the two can
 	   operate together relatively efficiently with only minimal blocking
 	   and no second pixel buffer required. */
-	//while(nState==0); enable me
+	while(nState==0); 
 
   uint16_t data = g & 0x1F;
   data <<= 5;
@@ -144,7 +152,7 @@ void Neophob_LPD6803::setPixelColor(uint16_t n, uint16_t c) {
 	   functions in reverse (high to low pixel index), then the two can
 	   operate together relatively efficiently with only minimal blocking
 	   and no second pixel buffer required. */
-	//while(nState==0); enable me
+	while(nState==0); 
 
   pixels[n] = 0x8000 | c;
 }

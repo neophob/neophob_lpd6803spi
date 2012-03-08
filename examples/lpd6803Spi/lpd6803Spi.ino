@@ -28,9 +28,9 @@ void setup() {
 
 
 void loop() {
-  colorWipe(Color(63, 0, 0), 50);
-  colorWipe(Color(0, 63, 0), 50);
-  colorWipe(Color(0, 0, 63), 50);
+  colorWipe(Color(31, 0, 0), 50);
+  colorWipe(Color(0, 31, 0), 50);
+  colorWipe(Color(0, 0, 31), 50);
   
   rainbowCycle(50);
   
