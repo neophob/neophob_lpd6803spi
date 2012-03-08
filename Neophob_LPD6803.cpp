@@ -114,11 +114,17 @@ void Neophob_LPD6803::show(void) {
 
 
 void Neophob_LPD6803::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b) {
-  uint16_t data;
-
   if (n > numLEDs) return;
+  
+    /* As a modest alternative to full double-buffering, the setPixel()
+	   function blocks until the serial output interrupt has moved past
+	   the pixel being modified here.  If the animation-rendering loop
+	   functions in reverse (high to low pixel index), then the two can
+	   operate together relatively efficiently with only minimal blocking
+	   and no second pixel buffer required. */
+	//while(nState==0); enable me
 
-  data = g & 0x1F;
+  uint16_t data = g & 0x1F;
   data <<= 5;
   data |= b & 0x1F;
   data <<= 5;
@@ -131,6 +137,14 @@ void Neophob_LPD6803::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b)
 //---
 void Neophob_LPD6803::setPixelColor(uint16_t n, uint16_t c) {
   if (n > numLEDs) return;
+
+    /* As a modest alternative to full double-buffering, the setPixel()
+     function blocks until the serial output interrupt has moved past
+	   the pixel being modified here.  If the animation-rendering loop
+	   functions in reverse (high to low pixel index), then the two can
+	   operate together relatively efficiently with only minimal blocking
+	   and no second pixel buffer required. */
+	//while(nState==0); enable me
 
   pixels[n] = 0x8000 | c;
 }
