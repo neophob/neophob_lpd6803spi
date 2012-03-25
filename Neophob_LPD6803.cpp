@@ -42,34 +42,53 @@ Neophob_LPD6803::Neophob_LPD6803(uint16_t n) {
 //Otherwise it will just send clocks.
 static void isr() {
   static uint16_t indx=0;
-  
-  if(nState==1) {//send clock and check for color update (isDirty)
-    //SPI_A(0); //maybe, move at the end of the startSPI() method
-    if (isDirty==1) { //must we update the pixel value
+
+  if (nState==1) {
+    //check update color, make sure the data has been validated 
+    if (isDirty==1 && indx==0) { //must we update the pixel value
       nState = 0;
       isDirty = 0;
-      SPI_LOAD_BYTE(0);
-      SPI_WAIT_TILL_TRANSMITED; 
+	  //SPI_LOAD_BYTE(0);
+	  //SPI_WAIT_TILL_TRANSMITED; 
+	  SPI.transfer(0);
       indx = 0;
       pData = pDataStart; //reset index
       return;
     }
-    SPI_LOAD_BYTE(0);
-    SPI_WAIT_TILL_TRANSMITED;
+    
+    //decrease counter, make sure we 
+    if (indx>0) {
+    	indx--;
+    }
+
+    //just send out zeros all the time, used to validate updates and prepare updates
+	//SPI_LOAD_BYTE(0);
+	//SPI_WAIT_TILL_TRANSMITED; 
+	SPI.transfer(0);
+  
     return;
+  } 
+  else if (nState==1) {
   }
-  else {                        //feed out pixelbuffer    
+  else { //feed out pixelbuffer
+  	
+  	//First shift in 32bit “0” as start frame, then shift in all data frame, start 
+  	//frame and data frame both are shift by high-bit, every data is input on DCLK rising edge.
+  	
     register uint16_t command;
     command = *(pData++);       //get current pixel
-    SPI_LOAD_BYTE( (command>>8) & 0xFF);
-    SPI_WAIT_TILL_TRANSMITED;                      //send 8bits
+/*  SPI_LOAD_BYTE( (command>>8) & 0xFF);
+    SPI_WAIT_TILL_TRANSMITED;                      	//send 8bits
     
     SPI_LOAD_BYTE( command & 0xFF);
-    SPI_WAIT_TILL_TRANSMITED;                      //send 8bits again
+    SPI_WAIT_TILL_TRANSMITED;                      	//send 8bits again*/
+    SPI.transfer( (command>>8) & 0xFF);
+    SPI.transfer( command      & 0xFF);
     
-    indx++;                     //are we done?
+    indx++;                     					//are we done?
     if(indx >= prettyUglyCopyOfNumPixels) { 
       nState = 1;
+      indx = prettyUglyCopyOfNumPixels+32;	  //validate the update, send nrofpixels times 0
     }
 
     return;
@@ -140,7 +159,7 @@ void Neophob_LPD6803::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b)
   data |= b & 0x1F;
   data <<= 5;
   data |= r & 0x1F;
-  data |= 0x8000;
+  data |= 0x8000; //the first bit of the color word must be set
 
   pixels[n] = data;
 }
@@ -157,7 +176,7 @@ void Neophob_LPD6803::setPixelColor(uint16_t n, uint16_t c) {
 	   and no second pixel buffer required. */
 	while(nState==0); 
 
-  pixels[n] = 0x8000 | c;
+  pixels[n] = 0x8000 | c; //the first bit of the color word must be set
 }
 
 
