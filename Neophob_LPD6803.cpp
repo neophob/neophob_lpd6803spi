@@ -9,8 +9,8 @@
 #include "SPI.h"
 #include "Neophob_LPD6803.h"
 
-#define SPI_A(data) SPDR=data;
-#define SPI_B while(!(SPSR & (1<<SPIF))); 
+#define SPI_A(data) SPDR=data; /*the SPI data register (SPDR) holds the byte which is about to be shifted out the MOSI line */
+#define SPI_B while(!(SPSR & (1<<SPIF))); /* Wait until last bytes is transmitted. */
 
 //some local variables, ised in isr
 static uint8_t isDirty;
