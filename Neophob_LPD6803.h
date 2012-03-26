@@ -25,8 +25,6 @@ class Neophob_LPD6803 {
 
   uint16_t
     numLEDs;  
-  uint16_t 
-  	*pixels;  
   uint8_t
     cpumax,
     clkpin    , datapin,     // Clock & data pin numbers

@@ -12,16 +12,15 @@
 //some local variables, ised in isr
 static uint8_t isDirty;
 static uint16_t prettyUglyCopyOfNumPixels;
-static uint16_t *pData;
-static uint16_t *pDataStart;
+static uint16_t *pixelDataCurrent;	//working pointer
+static uint16_t *pixelData; //pointer to pixel buffer, we cannot access pixels form isr!
 volatile unsigned char nState=1;
 
 // Constructor for use with hardware SPI (specific clock/data pins):
 Neophob_LPD6803::Neophob_LPD6803(uint16_t n) {
   prettyUglyCopyOfNumPixels = n;  
   numLEDs = n;  
-  pixels = (uint16_t *)malloc(numLEDs);
-  pDataStart = pixels;
+  pixelData = (uint16_t *)malloc(n);
   isDirty = 0;    
   cpumax = 70;
   
@@ -45,30 +44,23 @@ static void isr() {
 
   if (nState==1) {
     //check update color, make sure the data has been validated 
-    if (isDirty==1 && indx==0) { //must we update the pixel value
-      nState = 0;
-      isDirty = 0;
+    if (isDirty==1) { //must we update the pixel value
 	  //SPI_LOAD_BYTE(0);
 	  //SPI_WAIT_TILL_TRANSMITED; 
 	  SPI.transfer(0);
+	  	  
       indx = 0;
-      pData = pDataStart; //reset index
+      pixelDataCurrent = pixelData; //reset index
+      nState = 0;
+      isDirty = 0;
       return;
     }
     
-    //decrease counter, make sure we 
-    if (indx>0) {
-    	indx--;
-    }
-
     //just send out zeros all the time, used to validate updates and prepare updates
+    SPI.transfer(0);
 	//SPI_LOAD_BYTE(0);
 	//SPI_WAIT_TILL_TRANSMITED; 
-	SPI.transfer(0);
-  
     return;
-  } 
-  else if (nState==1) {
   }
   else { //feed out pixelbuffer
   	
@@ -76,19 +68,17 @@ static void isr() {
   	//frame and data frame both are shift by high-bit, every data is input on DCLK rising edge.
   	
     register uint16_t command;
-    command = *(pData++);       //get current pixel
-/*  SPI_LOAD_BYTE( (command>>8) & 0xFF);
-    SPI_WAIT_TILL_TRANSMITED;                      	//send 8bits
-    
-    SPI_LOAD_BYTE( command & 0xFF);
-    SPI_WAIT_TILL_TRANSMITED;                      	//send 8bits again*/
+    command = *(pixelDataCurrent++);       //get current pixel
+  	//SPI_LOAD_BYTE( (command>>8) & 0xFF);
+    //SPI_WAIT_TILL_TRANSMITED;                      	//send 8bits
+    //SPI_LOAD_BYTE( command & 0xFF);
+    //SPI_WAIT_TILL_TRANSMITED;                      	//send 8bits again
     SPI.transfer( (command>>8) & 0xFF);
     SPI.transfer( command      & 0xFF);
-    
-    indx++;                     					//are we done?
-    if(indx >= prettyUglyCopyOfNumPixels) { 
+
+    if(indx++ >= prettyUglyCopyOfNumPixels) { 
       nState = 1;
-      indx = prettyUglyCopyOfNumPixels+32;	  //validate the update, send nrofpixels times 0
+     
     }
 
     return;
@@ -120,8 +110,8 @@ void Neophob_LPD6803::startSPI(void) {
   SPI.begin();
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
-//  SPI.setClockDivider(SPI_CLOCK_DIV8);  // 2 MHz
- SPI.setClockDivider(SPI_CLOCK_DIV16);  // 1 MHz  
+  SPI.setClockDivider(SPI_CLOCK_DIV8);  // 2 MHz
+// SPI.setClockDivider(SPI_CLOCK_DIV16);  // 1 MHz  
 // SPI.setClockDivider(SPI_CLOCK_DIV32);  // 0.5 MHz  
 //  SPI.setClockDivider(SPI_CLOCK_DIV64);  // 0.25 MHz  
   // LPD6803 can handle a data/PWM clock of up to 25 MHz, and 50 Ohm
@@ -144,7 +134,7 @@ void Neophob_LPD6803::show(void) {
 
 
 void Neophob_LPD6803::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b) {
-  if (n > numLEDs) return;
+  if (n > prettyUglyCopyOfNumPixels) return;
   
     /* As a modest alternative to full double-buffering, the setPixel()
 	   function blocks until the serial output interrupt has moved past
@@ -152,7 +142,7 @@ void Neophob_LPD6803::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b)
 	   functions in reverse (high to low pixel index), then the two can
 	   operate together relatively efficiently with only minimal blocking
 	   and no second pixel buffer required. */
-	while(nState==0); 
+  while(nState==0); 
 
   uint16_t data = g & 0x1F;
   data <<= 5;
@@ -161,12 +151,12 @@ void Neophob_LPD6803::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b)
   data |= r & 0x1F;
   data |= 0x8000; //the first bit of the color word must be set
 
-  pixels[n] = data;
+  pixelData[n] = data;
 }
 
 //---
 void Neophob_LPD6803::setPixelColor(uint16_t n, uint16_t c) {
-  if (n > numLEDs) return;
+  if (n > prettyUglyCopyOfNumPixels) return;
 
     /* As a modest alternative to full double-buffering, the setPixel()
      function blocks until the serial output interrupt has moved past
@@ -174,9 +164,9 @@ void Neophob_LPD6803::setPixelColor(uint16_t n, uint16_t c) {
 	   functions in reverse (high to low pixel index), then the two can
 	   operate together relatively efficiently with only minimal blocking
 	   and no second pixel buffer required. */
-	while(nState==0); 
+  while(nState==0); 
 
-  pixels[n] = 0x8000 | c; //the first bit of the color word must be set
+  pixelData[n] = 0x8000 | c; //the first bit of the color word must be set
 }
 
 
